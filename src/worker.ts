@@ -248,6 +248,7 @@ async function getActiveUserByQr(
        FROM users
       WHERE qr_unique_code = ?
         AND status = 'aktif'
+        AND role = 'PESERTA'
       LIMIT 1`
   ).bind(code).first<UserRow>();
 }

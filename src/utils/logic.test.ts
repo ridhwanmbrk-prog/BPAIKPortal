@@ -82,6 +82,7 @@ test('Signature stroke validation checks emptiness and stroke length', () => {
 
 import {
   getCardQrCredential,
+  getCardQrUrl,
   normalizeCardQrPayload
 } from './cardQr';
 
@@ -99,6 +100,21 @@ test('Card QR supports plain text and structured JSON payloads', () => {
   );
 });
 
+test('Card QR deep-link opens the production beranda and normalizes its fragment', () => {
+  const credential = 'BPAIK-EhZBUUnFFT0fF9pID5iNs-Cx-o6g9WIZFN1PswPFM9A';
+  const url = getCardQrUrl({
+    id: 'participant-test',
+    npp: 'NPP-TEST',
+    qrUniqueCode: credential
+  });
+
+  assert.equal(
+    url,
+    `https://bpaik.bimma-uab.my.id/beranda/#${credential}`
+  );
+  assert.equal(normalizeCardQrPayload(url), credential);
+});
+
 test('Card QR does not treat plain NPP or user ID as a credential', () => {
   assert.equal(
     normalizeCardQrPayload(JSON.stringify({
@@ -109,13 +125,13 @@ test('Card QR does not treat plain NPP or user ID as a credential', () => {
   );
 });
 
-test('Card QR generator and legacy fallback use a consistent format', () => {
+test('Card QR never creates login credentials from personal identifiers', () => {
   assert.equal(
     getCardQrCredential({
       id: 'user-1',
       npp: 'NPP. 0422019800'
     }),
-    'BPAIK-KARTU-NPP0422019800'
+    ''
   );
 
   assert.equal(

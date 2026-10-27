@@ -8,6 +8,7 @@ import { ProjectorQrView } from './components/ProjectorQrView';
 import { QrScannerModal } from './components/QrScannerModal';
 import { AttendanceSuccessModal } from './components/AttendanceSuccessModal';
 import { SignaturePadModal } from './components/SignaturePadModal';
+import { normalizeCardQrPayload } from './utils/cardQr';
 import { BPAIKEvent, AttendanceRecord, BPAIKUser, AuditLog } from './types';
 
 // Always scroll to top when route changes: "buka antar halaman mulai dari atas"
@@ -51,9 +52,34 @@ function ProyektorRouteView({ events }: { events: BPAIKEvent[] }) {
 }
 
 function MainAppContent() {
-  const { bpaikUser, isLoading, logout } = useAuth();
+  const { bpaikUser, isLoading, logout, loginWithCardQr } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const autoCardQrAttemptRef = useRef<string | null>(null);
+  const loginWithCardQrRef = useRef(loginWithCardQr);
+  loginWithCardQrRef.current = loginWithCardQr;
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const fragment = window.location.hash.slice(1).trim();
+    if (!fragment) return;
+
+    const code = normalizeCardQrPayload(fragment);
+    if (!/^BPAIK-[A-Za-z0-9_-]{8,}$/i.test(code)) return;
+    if (autoCardQrAttemptRef.current === code) return;
+
+    autoCardQrAttemptRef.current = code;
+    void loginWithCardQrRef.current(code).then(() => {
+      window.history.replaceState(
+        window.history.state,
+        '',
+        `${window.location.pathname}${window.location.search}`
+      );
+    }).catch(() => {
+      // AuthContext menampilkan error login; fragmen tetap ada untuk diagnosis.
+    });
+  }, [isLoading]);
 
   // Firestore collections state with rich defaults
   const [events, setEvents] = useState<BPAIKEvent[]>([]);

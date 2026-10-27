@@ -80,6 +80,17 @@ export function normalizeCardQrPayload(rawValue: string): string {
         if (candidate?.trim()) return candidate.trim();
       }
 
+      const fragment = url.hash.slice(1).trim();
+      if (fragment) {
+        let decoded = fragment;
+        try {
+          decoded = decodeURIComponent(fragment);
+        } catch {
+          // Pertahankan fragmen literal bila encoding tidak valid.
+        }
+        if (/^BPAIK-[A-Za-z0-9_-]{8,}$/i.test(decoded)) return decoded;
+      }
+
       return '';
     } catch {
       return '';
@@ -89,6 +100,18 @@ export function normalizeCardQrPayload(rawValue: string): string {
   return raw;
 }
 
+/** URL produksi yang dicetak di QR kartu peserta. */
+export const BPAIK_CARD_LOGIN_URL =
+  'https://bpaik.bimma-uab.my.id/beranda';
+
+/** Membuat URL login dari kode QR acak yang tersimpan di D1. */
+export function getCardQrUrl(
+  user: Pick<BPAIKUser, 'id' | 'npp' | 'qrUniqueCode'>
+): string {
+  const code = getCardQrCredential(user);
+  return code ? `${BPAIK_CARD_LOGIN_URL}/#${encodeURIComponent(code)}` : '';
+}
+
 /**
  * Format tunggal untuk QR kartu:
  * gunakan qrUniqueCode jika tersedia, jika tidak gunakan format lama.
@@ -96,11 +119,6 @@ export function normalizeCardQrPayload(rawValue: string): string {
 export function getCardQrCredential(
   user: Pick<BPAIKUser, 'id' | 'npp' | 'qrUniqueCode'>
 ): string {
-  const uniqueCode = user.qrUniqueCode?.trim();
-  if (uniqueCode) return uniqueCode;
-
-  const identity = (user.npp || user.id || '')
-    .replace(/[^a-zA-Z0-9]/g, '');
-
-  return identity ? `BPAIK-KARTU-${identity}` : '';
+  // Kredensial login harus berupa kode acak yang tersimpan di D1.
+  return user.qrUniqueCode?.trim() || '';
 }
