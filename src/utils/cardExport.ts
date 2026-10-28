@@ -60,80 +60,29 @@ export async function generateCardCanvasJpg(
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, width, height);
 
-  // 2. Top KOP Header (Deep Forest Green #073922)
-  const headerHeight = 180;
-  ctx.fillStyle = '#073922';
-  ctx.fillRect(0, 0, width, headerHeight);
-
-  // White circle for logo
-  const logoCircleX = 75;
-  const logoCircleY = 90;
-  const logoRadius = 45;
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(logoCircleX, logoCircleY, logoRadius, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Try drawing the UNISA logo inside the white circle
-  try {
-    const logoImg = new Image();
-    logoImg.crossOrigin = 'anonymous';
-    await new Promise<void>((res) => {
-      logoImg.onload = () => res();
-      logoImg.onerror = () => res();
-      logoImg.src = '/assets/aistudio/image_4136b24a.png';
-    });
-    if (logoImg.width) {
-      ctx.drawImage(logoImg, logoCircleX - 35, logoCircleY - 35, 70, 70);
+  // 2. Gunakan kop kartu resmi dari aset yang disiapkan pengguna.
+  const kopImg = new Image();
+  kopImg.src = '/images/KOP-KARTU-BPAIK.jpg';
+  await new Promise<void>((resolve, reject) => {
+    if (kopImg.complete) {
+      if (kopImg.naturalWidth > 0) resolve();
+      else reject(new Error('KOP-KARTU-BPAIK.jpg gagal dimuat.'));
+      return;
     }
-  } catch (_) {}
+    kopImg.onload = () => resolve();
+    kopImg.onerror = () => reject(new Error('KOP-KARTU-BPAIK.jpg gagal dimuat.'));
+  });
+  if (!kopImg.naturalWidth || !kopImg.naturalHeight) {
+    throw new Error('KOP-KARTU-BPAIK.jpg tidak valid.');
+  }
+  const headerHeight = Math.round(width * kopImg.naturalHeight / kopImg.naturalWidth);
+  ctx.drawImage(kopImg, 0, 0, width, headerHeight);
 
-  // Header Typography
-  ctx.fillStyle = '#F4C542'; // Vibrant Gold
-  ctx.font = 'bold 24px system-ui, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText("UNIVERSITAS 'AISYIYAH", 145, 72);
-  ctx.fillText("BANDUNG", 145, 102);
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '500 16px system-ui, sans-serif';
-  ctx.fillText("Badan Pengembangan Al-Islam &", 145, 134);
-  ctx.fillText("Kemuhammadiyahan", 145, 156);
-
-  // Solid Gold Divider Line
-  ctx.fillStyle = '#F4C542';
-  ctx.fillRect(0, headerHeight, width, 5);
-
-  // 3. Sub-bar: "KARTU DIGITAL PESERTA BPAIK" & "• AKTIF"
-  const subBarY = headerHeight + 5;
-  const subBarHeight = 44;
-  ctx.fillStyle = '#eaf5ee';
-  ctx.fillRect(0, subBarY, width, subBarHeight);
-
-  // Border bottom for sub-bar
-  ctx.fillStyle = '#c8e5d6';
-  ctx.fillRect(0, subBarY + subBarHeight - 1, width, 1);
-
-  ctx.fillStyle = '#093d26';
-  ctx.font = 'bold 15px monospace';
-  ctx.textAlign = 'left';
-  ctx.fillText("KARTU DIGITAL PESERTA BPAIK", 32, subBarY + 28);
-
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#10b981';
-  ctx.beginPath();
-  ctx.arc(width - 95, subBarY + 23, 5, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = '#093d26';
-  ctx.font = 'bold 15px monospace';
-  ctx.fillText("AKTIF", width - 32, subBarY + 28);
-
-  // 4. Participant Photo: STRICT 2:3 ASPECT RATIO (No Stretching / Gepeng!)
+  // Foto dan isi kartu mulai tepat di bawah kop; tidak ada subtitle bar lama.
   const photoW = 220;
-  const photoH = 330; // 220 / 330 = 2:3 exactly!
+  const photoH = 330;
   const photoX = (width - photoW) / 2;
-  const photoY = subBarY + subBarHeight + 35;
+  const photoY = headerHeight + 35;
   const photoRadius = 24;
 
   ctx.save();

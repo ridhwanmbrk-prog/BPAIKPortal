@@ -243,38 +243,14 @@ export const ParticipantCardModal: React.FC<ParticipantCardModalProps> = ({
                 key={emp.id}
                 className="card-container w-[280px] h-[450px] bg-white rounded-3xl border-2 border-[#063921] shadow-xl overflow-hidden relative break-inside-avoid flex flex-col justify-between select-none"
               >
-                {/* 1. KOP ATAS: Deep Forest Green (#073922) */}
-                <div className="bg-[#073922] text-white p-3 flex items-center gap-2.5 shrink-0">
-                  <div className="w-11 h-11 rounded-full bg-white p-1 shrink-0 flex items-center justify-center shadow-xs">
-                    <img
-                      src="/images/logoBPAIK.png"
-                      alt="Logo UNISA"
-                      className="w-full h-full object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1 leading-tight">
-                    <h4 className="text-[11px] font-black tracking-wider uppercase text-[#F4C542] font-serif leading-tight">
-                      UNIVERSITAS 'AISYIYAH<br />BANDUNG
-                    </h4>
-                    <p className="text-[8.5px] text-white/95 font-medium tracking-normal mt-0.5 leading-tight">
-                      Badan Pengembangan Al-Islam &<br />Kemuhammadiyahan
-                    </p>
-                  </div>
-                </div>
-
-                {/* Solid Gold Accent Divider Line */}
-                <div className="w-full h-[2.5px] bg-[#F4C542] shrink-0" />
-
-                {/* Subtitle Bar: Light Mint with green dot */}
-                <div className="bg-[#eaf5ee] px-3 py-1 flex items-center justify-between border-b border-[#c8e5d6] text-[8.5px] font-bold text-[#093d26] tracking-wider font-mono shrink-0">
-                  <span className="truncate">KARTU DIGITAL PESERTA BPAIK</span>
-                  <div className="flex items-center gap-1 text-[#0f613c] font-black shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                    <span>AKTIF</span>
-                  </div>
+                {/* Kop resmi kartu BPAIK dari file yang sudah disiapkan */}
+                <div className="w-full shrink-0 bg-white">
+                  <img
+                    src="/images/KOP-KARTU-BPAIK.jpg"
+                    alt="Kop kartu resmi BPAIK"
+                    className="block w-full h-auto"
+                    loading="eager"
+                  />
                 </div>
 
                 {/* 2. CARD BODY: Foto 2x3 Proporsional (strictly NOT gepeng) & Identitas */}
