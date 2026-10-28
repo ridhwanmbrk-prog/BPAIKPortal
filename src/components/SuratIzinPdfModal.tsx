@@ -216,9 +216,8 @@ export const SuratIzinPdfModal: React.FC<SuratIzinPdfModalProps> = ({
             <div className="w-72 text-center space-y-1">
               <p className="text-slate-700 font-medium">Bandung, {formattedLetterDate}</p>
               <p className="font-bold text-slate-900 leading-tight">
-                Kepala Badan Pengembangan Al-Islam & Kemuhammadiyahan (BPAIK)
+                Kepala BPAIK Universitas 'Aisyiyah Bandung
               </p>
-              <p className="text-xs text-slate-600">Universitas 'Aisyiyah Bandung</p>
 
               {/* Tanda Tangan & Stempel Digital Resmi */}
               <div className="relative py-2 h-24 flex items-center justify-center">
@@ -248,7 +247,7 @@ export const SuratIzinPdfModal: React.FC<SuratIzinPdfModalProps> = ({
                   Dr. Mohammad Anwar Syi'aruddin, S.Hum., M.A.
                 </p>
                 <p className="font-mono text-[11px] text-slate-700 font-semibold">
-                  NPP: 0422019800
+                  NPP. 2025140290164
                 </p>
               </div>
             </div>

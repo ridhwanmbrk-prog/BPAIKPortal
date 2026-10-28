@@ -355,10 +355,10 @@ export async function downloadAttendanceReportPdf(
   pdf.text('TERVERIFIKASI SISTEM BPAIK', signX + 36, sy + 13.2, { align: 'center' });
   pdf.setTextColor(25, 25, 25);
   pdf.setFontSize(7.1);
-  pdf.text('Dr. H. Ahmad Dahlan, M.Ag.', signX, sy + 20);
+  pdf.text("Dr. Mohammad Anwar Syi'aruddin, S.Hum., M.A.", signX, sy + 20, { maxWidth: 72 });
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(6.5);
-  pdf.text('NPP. 0422019800', signX, sy + 24);
+  pdf.text('NPP. 2025140290164', signX, sy + 24);
 
   pdf.save(directSafeFilename(fileName));
 }

@@ -331,9 +331,9 @@ export const AttendancePdfModal: React.FC<AttendancePdfModalProps> = ({
               </div>
 
               <p className="font-bold text-slate-900 underline underline-offset-2">
-                Dr. H. Ahmad Dahlan, M.Ag.
+                Dr. Mohammad Anwar Syi'aruddin, S.Hum., M.A.
               </p>
-              <p className="text-[10px] text-slate-600 font-mono">NPP. 0422019800</p>
+              <p className="text-[10px] text-slate-600 font-mono">NPP. 2025140290164</p>
             </div>
           </div>
 
