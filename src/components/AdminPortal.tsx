@@ -43,6 +43,7 @@ import { exportAttendanceToExcel, downloadParticipantTemplateExcel } from '../ut
 import { AttendancePdfModal } from './AttendancePdfModal';
 import { ParticipantCardModal } from './ParticipantCardModal';
 import { UploadExcelModal } from './UploadExcelModal';
+import { UploadPhotoZipModal } from './UploadPhotoZipModal';
 import { SuratIzinPdfModal } from './SuratIzinPdfModal';
 import { Footer, UnisaEmblem } from './Footer';
 
@@ -78,6 +79,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
   // New Modals: Upload Excel, PDF with KOP, and ID Card printing
   const [showUploadExcelModal, setShowUploadExcelModal] = useState(false);
+  const [showUploadPhotoZipModal, setShowUploadPhotoZipModal] = useState(false);
   const [pdfModalEvent, setPdfModalEvent] = useState<BPAIKEvent | null>(null);
   const [showCardModal, setShowCardModal] = useState(false);
   const [selectedEmployeeForCard, setSelectedEmployeeForCard] = useState<BPAIKUser | null>(null);
@@ -1776,6 +1778,16 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
                     <button
                       type="button"
+                      onClick={() => setShowUploadPhotoZipModal(true)}
+                      className="tactile-3d-btn-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                      title="Unggah foto banyak peserta sekaligus melalui ZIP"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-emerald-800" />
+                      <span>Upload Foto ZIP</span>
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={downloadParticipantTemplateExcel}
                       className="tactile-3d-btn-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
                       title="Download template file Excel untuk format data peserta"
@@ -2738,6 +2750,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             onRefreshData();
           }}
           onClose={() => setShowUploadExcelModal(false)}
+        />
+      )}
+
+      {/* MODAL: UNGGAH FOTO PESERTA DARI ZIP */}
+      {showUploadPhotoZipModal && (
+        <UploadPhotoZipModal
+          participants={employees.filter(user => user.role === 'PESERTA')}
+          onClose={() => setShowUploadPhotoZipModal(false)}
+          onUploaded={onRefreshData}
         />
       )}
 

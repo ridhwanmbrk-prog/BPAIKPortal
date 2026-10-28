@@ -7,14 +7,26 @@ interface PreparedStatement {
   run(): Promise<{ success: boolean; meta?: unknown }>;
 }
 
+interface PhotoR2Object {
+  body: ReadableStream;
+  httpMetadata?: { contentType?: string };
+  httpEtag?: string;
+}
+interface PhotoR2Bucket {
+  get(key: string): Promise<PhotoR2Object | null>;
+  put(key: string, value: Uint8Array, options?: {
+    httpMetadata?: { contentType?: string; cacheControl?: string };
+    customMetadata?: Record<string, string>;
+  }): Promise<unknown>;
+  delete(key: string): Promise<void>;
+}
 interface Env {
-  ASSETS: {
-    fetch(request: Request): Promise<Response>;
-  };
+  ASSETS: { fetch(request: Request): Promise<Response> };
   DB: {
     prepare(query: string): PreparedStatement;
     batch(statements: PreparedStatement[]): Promise<Array<{ success: boolean }>>;
   };
+  PHOTOS?: PhotoR2Bucket;
   FIREBASE_PROJECT_ID: string;
   SESSION_SECRET: string;
   QR_HMAC_SECRET: string;
@@ -195,7 +207,9 @@ function mapUser(row: UserRow) {
     npp: row.npp,
     jabatan: row.jabatan,
     whatsapp: row.whatsapp,
-    ...(row.avatar_url ? { avatarUrl: row.avatar_url } : {}),
+    ...(row.avatar_url ? { avatarUrl: row.avatar_url.startsWith('r2:')
+      ? `/api/photos/${encodeURIComponent(row.id)}?v=${encodeURIComponent(row.updated_at)}`
+      : row.avatar_url } : {}),
     role: row.role,
     ...(row.qr_unique_code
       ? { qrUniqueCode: row.qr_unique_code }
@@ -3028,6 +3042,84 @@ export default {
         return json({ success: true, decision });
       } catch {
         return json({ success: false, error: "Gagal menyimpan keputusan izin ke D1." }, 503);
+      }
+    }
+
+    // Foto disimpan privat di R2. Admin dapat melihat foto peserta; peserta hanya fotonya sendiri.
+    const photoGetMatch = path.match(/^\/api\/photos\/([^/]+)$/);
+    if (photoGetMatch && request.method === "GET") {
+      const auth = await getSessionUserForApi(request, env);
+      if (!auth.ok) return json({ success: false, error: auth.error }, auth.status);
+      if (!env.PHOTOS) return json({ success: false, error: "Bucket foto belum dikonfigurasi." }, 503);
+      let userId: string;
+      try { userId = decodeURIComponent(photoGetMatch[1]); }
+      catch { return json({ success: false, error: "ID pengguna tidak valid." }, 400); }
+      if (auth.user.role !== "ADMIN" && auth.user.id !== userId) {
+        return json({ success: false, error: "Tidak memiliki akses ke foto ini." }, 403);
+      }
+      try {
+        const user = await env.DB.prepare(
+          "SELECT id, avatar_url FROM users WHERE id = ? LIMIT 1"
+        ).bind(userId).first<{ id: string; avatar_url: string | null }>();
+        if (!user?.avatar_url?.startsWith("r2:")) return json({ success: false, error: "Foto tidak ditemukan." }, 404);
+        const object = await env.PHOTOS.get(user.avatar_url.slice(3));
+        if (!object) return json({ success: false, error: "File foto tidak ditemukan." }, 404);
+        const headers = new Headers({
+          "Content-Type": object.httpMetadata?.contentType || "image/jpeg",
+          "Cache-Control": "private, max-age=3600",
+          "X-Content-Type-Options": "nosniff"
+        });
+        if (object.httpEtag) headers.set("ETag", object.httpEtag);
+        return new Response(object.body, { headers });
+      } catch {
+        return json({ success: false, error: "Gagal mengambil foto." }, 503);
+      }
+    }
+
+    // Endpoint upload hanya untuk admin dan akun PESERTA. Foto maksimum 1 MiB.
+    const photoUploadMatch = path.match(/^\/api\/users\/([^/]+)\/photo$/);
+    if (photoUploadMatch && request.method === "POST") {
+      const auth = await getSessionUserForApi(request, env);
+      if (!auth.ok) return json({ success: false, error: auth.error }, auth.status);
+      if (auth.user.role !== "ADMIN") return json({ success: false, error: "Hanya admin yang dapat mengunggah foto." }, 403);
+      if (!env.PHOTOS) return json({ success: false, error: "Bucket foto belum dikonfigurasi." }, 503);
+      let userId: string;
+      try { userId = decodeURIComponent(photoUploadMatch[1]); }
+      catch { return json({ success: false, error: "ID pengguna tidak valid." }, 400); }
+      const declaredLength = Number(request.headers.get("Content-Length") || 0);
+      if (declaredLength > 1_048_576) return json({ success: false, error: "Ukuran foto harus kurang dari 1 MB." }, 413);
+      try {
+        const target = await env.DB.prepare(
+          "SELECT id, name, role, avatar_url FROM users WHERE id = ? LIMIT 1"
+        ).bind(userId).first<{ id: string; name: string; role: string; avatar_url: string | null }>();
+        if (!target) return json({ success: false, error: "Peserta tidak ditemukan." }, 404);
+        if (target.role !== "PESERTA") return json({ success: false, error: "Foto hanya dapat ditambahkan untuk akun PESERTA." }, 400);
+        const bytes = new Uint8Array(await request.arrayBuffer());
+        if (!bytes.length) return json({ success: false, error: "Foto kosong." }, 400);
+        if (bytes.byteLength >= 1_048_576) return json({ success: false, error: "Ukuran foto harus kurang dari 1 MB." }, 413);
+        let contentType = ""; let ext = "";
+        if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) { contentType = "image/png"; ext = "png"; }
+        else if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) { contentType = "image/jpeg"; ext = "jpg"; }
+        else if (bytes.length >= 12 && String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" && String.fromCharCode(...bytes.slice(8, 12)) === "WEBP") { contentType = "image/webp"; ext = "webp"; }
+        else return json({ success: false, error: "Format tidak valid. Gunakan JPG, PNG, atau WEBP." }, 415);
+
+        const key = `participant-photos/${userId}/${crypto.randomUUID()}.${ext}`;
+        await env.PHOTOS.put(key, bytes, {
+          httpMetadata: { contentType, cacheControl: "private, max-age=3600" },
+          customMetadata: { userId, uploadedBy: auth.user.email }
+        });
+        const updatedAt = new Date().toISOString();
+        const update = await env.DB.prepare(
+          "UPDATE users SET avatar_url = ?, updated_at = ? WHERE id = ? AND role = 'PESERTA'"
+        ).bind(`r2:${key}`, updatedAt, userId).run();
+        if (!update.success) {
+          await env.PHOTOS.delete(key).catch(() => {});
+          return json({ success: false, error: "Metadata foto gagal disimpan." }, 503);
+        }
+        if (target.avatar_url?.startsWith("r2:")) await env.PHOTOS.delete(target.avatar_url.slice(3)).catch(() => {});
+        return json({ success: true, userId, name: target.name, sizeBytes: bytes.byteLength });
+      } catch {
+        return json({ success: false, error: "Gagal menyimpan foto peserta." }, 503);
       }
     }
 
