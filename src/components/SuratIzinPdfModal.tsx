@@ -115,48 +115,15 @@ export const SuratIzinPdfModal: React.FC<SuratIzinPdfModalProps> = ({
       {/* Sheet Content Wrapper */}
       <div className="w-full max-w-3xl bg-white text-slate-900 rounded-b-2xl p-6 sm:p-12 shadow-2xl max-h-[85vh] overflow-y-auto print:max-h-none print:overflow-visible print:p-0 print:m-0 print:shadow-none print:w-full print:rounded-none">
         
-        <div ref={printAreaRef} className="print-letter space-y-6 text-slate-900 text-xs sm:text-sm leading-relaxed">
+        <div ref={printAreaRef} className="print-letter space-y-4 text-slate-900 text-xs sm:text-sm leading-relaxed">
           
-          {/* ========================================================
-              KOP SURAT RESMI UNIVERSITAS 'AISYIYAH BANDUNG & BPAIK
-          ======================================================== */}
-          <div className="border-b-4 border-double border-slate-900 pb-3 text-center relative">
-            <div className="flex items-center justify-between gap-4">
-              {/* Logo UNISA */}
-              <div className="w-20 h-20 shrink-0 flex items-center justify-center">
-                <img
-                  src="/images/logoBPAIK.png"
-                  alt="Logo BPAIK UNISA Bandung"
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              </div>
-
-              {/* Teks Identitas Kampus */}
-              <div className="flex-1 text-center">
-                <h4 className="text-xs sm:text-sm font-semibold tracking-wider uppercase text-slate-700">
-                  MAJELIS PENDIDIKAN TINGGI PENELITIAN DAN PENGEMBANGAN PP MUHAMMADIYAH
-                </h4>
-                <h2 className="text-base sm:text-xl font-black text-emerald-950 tracking-wide font-serif uppercase mt-0.5">
-                  UNIVERSITAS 'AISYIYAH BANDUNG
-                </h2>
-                <h3 className="text-xs sm:text-sm font-black text-amber-700 uppercase tracking-wider font-serif">
-                  BADAN PENGEMBANGAN AL-ISLAM DAN KEMUHAMMADIYAHAN (BPAIK)
-                </h3>
-                <p className="text-[10px] sm:text-[11px] text-slate-600 mt-1">
-                  kantor BPAIK: Gedung PESMA UNISA Bandung Jl. Terusan Rancagoong II No.1, Gumuruh, Kec. Batununggal, Kota Bandung 40275
-                </p>
-                <p className="text-[9px] sm:text-[10px] text-slate-500 font-mono">
-                  Telp: (022) 7305269 | Email: bpaik@unisa-bandung.ac.id | Website: https://unisa-bandung.ac.id
-                </p>
-              </div>
-
-              {/* Spacer kanan untuk simetri KOP */}
-              <div className="w-16 hidden sm:block shrink-0" />
-            </div>
-          </div>
+          {/* Kop surat resmi BPAIK dari berkas yang disediakan */}
+          <img
+            src="/images/KOP-SURAT-BPAIK.jpg"
+            alt="Kop surat resmi BPAIK"
+            className="block w-full h-auto"
+            loading="eager"
+          />
 
           {/* Nomor & Perihal Surat */}
           <div className="flex flex-col sm:flex-row justify-between items-start gap-2 pt-2">

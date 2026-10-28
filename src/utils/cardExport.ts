@@ -8,6 +8,17 @@ export async function downloadCardElementAsJpg(
   cardElement: HTMLElement,
   fileName: string = 'kartu-digital-peserta-bpaik.jpg'
 ): Promise<void> {
+  // Ensure the supplied kop and participant photo are decoded before capture.
+  await Promise.all(Array.from(cardElement.querySelectorAll('img')).map(async (image) => {
+    if (image.complete && image.naturalWidth > 0) return;
+    await new Promise<void>((resolve) => {
+      const done = () => resolve();
+      image.addEventListener('load', done, { once: true });
+      image.addEventListener('error', done, { once: true });
+      setTimeout(done, 5000);
+    });
+  }));
+
   // Use scale: 3 for ultra-crisp retina quality
   const canvas = await html2canvas(cardElement, {
     scale: 3,
@@ -35,7 +46,7 @@ export async function generateCardCanvasJpg(
 ): Promise<string> {
   const canvas = document.createElement('canvas');
   const width = 640;
-  const height = 1040;
+  const height = 1100;
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
@@ -60,80 +71,49 @@ export async function generateCardCanvasJpg(
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, width, height);
 
-  // 2. Top KOP Header (Deep Forest Green #073922)
-  const headerHeight = 180;
-  ctx.fillStyle = '#073922';
-  ctx.fillRect(0, 0, width, headerHeight);
+  // 2. Kop kartu resmi: gambar 640x227 dipertahankan proporsinya.
+  const headerHeight = Math.round(width * 227 / 640);
+  const kopImg = new Image();
+  kopImg.src = '/images/KOP-KARTU-BPAIK.jpg';
+  await new Promise<void>((resolve) => {
+    if (kopImg.complete) return resolve();
+    kopImg.onload = () => resolve();
+    kopImg.onerror = () => resolve();
+  });
+  if (kopImg.naturalWidth > 0) {
+    ctx.drawImage(kopImg, 0, 0, width, headerHeight);
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, headerHeight);
+  }
 
-  // White circle for logo
-  const logoCircleX = 75;
-  const logoCircleY = 90;
-  const logoRadius = 45;
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(logoCircleX, logoCircleY, logoRadius, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Try drawing the UNISA logo inside the white circle
-  try {
-    const logoImg = new Image();
-    logoImg.crossOrigin = 'anonymous';
-    await new Promise<void>((res) => {
-      logoImg.onload = () => res();
-      logoImg.onerror = () => res();
-      logoImg.src = '/assets/aistudio/image_4136b24a.png';
-    });
-    if (logoImg.width) {
-      ctx.drawImage(logoImg, logoCircleX - 35, logoCircleY - 35, 70, 70);
-    }
-  } catch (_) {}
-
-  // Header Typography
-  ctx.fillStyle = '#F4C542'; // Vibrant Gold
-  ctx.font = 'bold 24px system-ui, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText("UNIVERSITAS 'AISYIYAH", 145, 72);
-  ctx.fillText("BANDUNG", 145, 102);
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '500 16px system-ui, sans-serif';
-  ctx.fillText("Badan Pengembangan Al-Islam &", 145, 134);
-  ctx.fillText("Kemuhammadiyahan", 145, 156);
-
-  // Solid Gold Divider Line
-  ctx.fillStyle = '#F4C542';
-  ctx.fillRect(0, headerHeight, width, 5);
-
-  // 3. Sub-bar: "KARTU DIGITAL PESERTA BPAIK" & "• AKTIF"
-  const subBarY = headerHeight + 5;
-  const subBarHeight = 44;
+  // 3. Bar informasi kartu di bawah kop resmi.
+  const subBarY = headerHeight;
+  const subBarHeight = 40;
   ctx.fillStyle = '#eaf5ee';
   ctx.fillRect(0, subBarY, width, subBarHeight);
-
-  // Border bottom for sub-bar
   ctx.fillStyle = '#c8e5d6';
   ctx.fillRect(0, subBarY + subBarHeight - 1, width, 1);
 
   ctx.fillStyle = '#093d26';
   ctx.font = 'bold 15px monospace';
   ctx.textAlign = 'left';
-  ctx.fillText("KARTU DIGITAL PESERTA BPAIK", 32, subBarY + 28);
+  ctx.fillText('KARTU DIGITAL PESERTA BPAIK', 32, subBarY + 25);
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#10b981';
   ctx.beginPath();
-  ctx.arc(width - 95, subBarY + 23, 5, 0, Math.PI * 2);
+  ctx.arc(width - 95, subBarY + 20, 5, 0, Math.PI * 2);
   ctx.fill();
-
   ctx.fillStyle = '#093d26';
   ctx.font = 'bold 15px monospace';
-  ctx.fillText("AKTIF", width - 32, subBarY + 28);
+  ctx.fillText('AKTIF', width - 32, subBarY + 25);
 
   // 4. Participant Photo: STRICT 2:3 ASPECT RATIO (No Stretching / Gepeng!)
   const photoW = 220;
   const photoH = 330; // 220 / 330 = 2:3 exactly!
   const photoX = (width - photoW) / 2;
-  const photoY = subBarY + subBarHeight + 35;
+  const photoY = subBarY + subBarHeight + 20;
   const photoRadius = 24;
 
   ctx.save();

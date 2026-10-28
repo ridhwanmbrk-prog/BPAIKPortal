@@ -8,6 +8,19 @@ export interface PdfExportOptions {
   marginMm?: number;
 }
 
+/** Wait for document images (including the provided letterhead) before capture. */
+async function waitForImages(element: HTMLElement): Promise<void> {
+  await Promise.all(Array.from(element.querySelectorAll('img')).map(async (image) => {
+    if (image.complete && image.naturalWidth > 0) return;
+    await new Promise<void>((resolve) => {
+      const done = () => resolve();
+      image.addEventListener('load', done, { once: true });
+      image.addEventListener('error', done, { once: true });
+      setTimeout(done, 5000);
+    });
+  }));
+}
+
 /**
  * Downloads an HTML element as a high-fidelity PDF file.
  * Handles single or multiple pages automatically.
@@ -22,6 +35,9 @@ export async function downloadElementAsPdf(
     format = 'a4',
     marginMm = 10
   } = options;
+
+  // Ensure the kop and other images have loaded before exporting.
+  await waitForImages(element);
 
   // Capture element using html2canvas with high-DPI scale for crisp text and signatures
   const canvas = await html2canvas(element, {
