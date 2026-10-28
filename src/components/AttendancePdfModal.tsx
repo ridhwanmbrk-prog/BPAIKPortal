@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { X, Printer, Download, FileSpreadsheet, CheckCircle2, Loader2 } from 'lucide-react';
 import { BPAIKEvent, AttendanceRecord } from '../types';
 import { exportAttendanceToExcel } from '../utils/reportExport';
-import { downloadElementAsPdf } from '../utils/pdfExport';
+import { downloadAttendanceTableAsPdf } from '../utils/pdfExport';
 
 interface AttendancePdfModalProps {
   event: BPAIKEvent;
@@ -42,16 +42,16 @@ export const AttendancePdfModal: React.FC<AttendancePdfModalProps> = ({
         .replace(/[^a-z0-9]/g, '-')
         .replace(/-+/g, '-')
         .slice(0, 35);
-      await downloadElementAsPdf(printAreaRef.current, {
+      await downloadAttendanceTableAsPdf(printAreaRef.current, {
         fileName: `rekap-absensi-bpaik-${cleanEventTitle}-${event.date}.pdf`,
         orientation: 'portrait',
         format: 'a4',
-        marginMm: 6
+        marginMm: 8,
+        rowsPerPage: 12
       });
     } catch (err) {
       console.error('PDF export error:', err);
-      alert('PDF otomatis gagal dibuat. Dialog cetak akan dibuka; pilih "Simpan sebagai PDF".');
-      window.print();
+      alert('PDF gagal dibuat. Silakan coba lagi; tidak ada dialog cetak tambahan yang dibuka.');
     } finally {
       setIsDownloadingPdf(false);
     }
@@ -130,50 +130,13 @@ export const AttendancePdfModal: React.FC<AttendancePdfModalProps> = ({
         
         <div ref={printAreaRef} className="print-content space-y-4">
           
-          {/* ========================================================
-              KOP SURAT RESMI UNIVERSITAS 'AISYIYAH BANDUNG & BPAIK
-          ======================================================== */}
-          <div className="border-b-4 border-double border-slate-900 pb-3 text-center relative">
-            <div className="flex items-center justify-between gap-4">
-              {/* Logo / Badge UNISA / Muhammadiyah */}
-              <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 flex items-center justify-center">
-                <img
-                  src="/images/logoBPAIK.png"
-                  alt="Logo BPAIK UNISA Bandung"
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    // Fallback to stylized SVG emblem if image path fails
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              </div>
-
-              {/* Text Header */}
-              <div className="flex-1 text-center">
-                <p className="text-[11px] sm:text-xs font-bold tracking-wider uppercase text-slate-700 font-sans">
-                  MAJELIS PENDIDIKAN TINGGI PENELITIAN DAN PENGEMBANGAN
-                </p>
-                <p className="text-[11px] sm:text-xs font-bold tracking-wider uppercase text-slate-700 font-sans">
-                  PIMPINAN PUSAT MUHAMMADIYAH
-                </p>
-                <h1 className="text-base sm:text-xl font-extrabold text-emerald-950 font-serif tracking-wide uppercase mt-0.5">
-                  UNIVERSITAS 'AISYIYAH BANDUNG
-                </h1>
-                <h2 className="text-xs sm:text-sm font-bold text-emerald-800 font-serif tracking-widest uppercase">
-                  BADAN PENGEMBANGAN AL-ISLAM DAN KEMUHAMMADIYAHAN (BPAIK)
-                </h2>
-                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1 leading-tight font-sans">
-                  kantor BPAIK: Gedung PESMA UNISA Bandung Jl. Terusan Rancagoong II No.1, Gumuruh, Kec. Batununggal, Kota Bandung 40275<br />
-                  Telp: (022) 7305269 | Website: unisa-bandung.ac.id | Email: bpaik@unisa-bandung.ac.id
-                </p>
-              </div>
-
-              {/* Secondary Emblem Placeholder */}
-              <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 hidden sm:flex items-center justify-center p-1 border-2 border-emerald-800 rounded-full text-emerald-900 font-serif text-[10px] font-bold text-center leading-tight">
-                UNISA<br/>BANDUNG
-              </div>
-            </div>
-          </div>
+          {/* Kop rekap absensi memakai aset kop surat resmi BPAIK */}
+          <img
+            src="/images/KOP-SURAT-BPAIK.jpg"
+            alt="Kop surat resmi BPAIK"
+            className="block w-full h-auto"
+            loading="eager"
+          />
 
           {/* Document Title */}
           <div className="text-center pt-2">
@@ -225,91 +188,62 @@ export const AttendancePdfModal: React.FC<AttendancePdfModalProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-900">
-                {Array.from({ length: totalRows }).map((_, index) => {
-                  const rowNum = index + 1;
-                  const rec = sortedRecords[index];
-                  const isOdd = rowNum % 2 !== 0;
+                {Array.from({ length: Math.max(1, Math.ceil(totalRows / 2)) }).map((_, pairIndex) => {
+                  const leftNumber = pairIndex * 2 + 1;
+                  const leftRecord = sortedRecords[leftNumber - 1];
+                  const rightRecord = sortedRecords[leftNumber];
 
-                  return (
-                    <tr key={rowNum} className="border border-slate-900 text-slate-900 h-24">
-                      {/* No */}
-                      <td className="border border-slate-900 text-center font-semibold text-[11px] p-1 font-mono">
-                        {rowNum}
+                  const renderRecordCells = (record: AttendanceRecord | undefined, rowNumber: number) => (
+                    <>
+                      <td className="border border-slate-900 text-center font-semibold text-[10px] p-1 font-mono">
+                        {record ? rowNumber : ''}
                       </td>
-
-                      {/* Nama Lengkap */}
-                      <td className="border border-slate-900 px-2 py-1 font-medium">
-                        {rec ? rec.userName : ''}
+                      <td className="border border-slate-900 px-2 py-1 font-medium text-[11px]">
+                        {record ? record.userName : ''}
                       </td>
-
-                      {/* Jabatan */}
-                      <td className="border border-slate-900 px-2 py-1 text-[11px] text-slate-700">
-                        {rec ? (rec.userJabatan || 'Peserta') : ''}
+                      <td className="border border-slate-900 px-2 py-1 text-[10px] text-slate-700">
+                        {record ? (record.userJabatan || 'Peserta') : ''}
                       </td>
-
-                      {/* ScanTime */}
-                      <td className="border border-slate-900 text-center font-mono text-[10px] px-1 py-1">
-                        {rec && (rec.attendanceStatus === 'IZIN' || (rec.notes && rec.notes.toLowerCase().includes('izin'))) ? (
-                          <span className="font-sans font-bold text-amber-900 bg-amber-100/90 px-1 py-0.5 rounded text-[9px] border border-amber-300 inline-block">
-                            Izin (Tidak Hadir)
+                      <td className="border border-slate-900 text-center font-mono text-[9px] px-1 py-1">
+                        {record && (record.attendanceStatus === 'IZIN' || (record.notes && record.notes.toLowerCase().includes('izin'))) ? (
+                          <span className="font-sans font-bold text-amber-900 bg-amber-100/90 px-1 py-0.5 rounded border border-amber-300 inline-block">
+                            Izin
                           </span>
-                        ) : rec ? (
-                          new Date(rec.scanTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB'
+                        ) : record ? (
+                          new Date(record.scanTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB'
                         ) : ''}
                       </td>
+                    </>
+                  );
 
-                      {/* Tanda Tangan Kolom 1 (Ganjil: 1, 3, 5...) */}
-                      <td className="border border-slate-900 p-1 relative text-left align-top w-32 h-24">
-                        {isOdd ? (
-                          <div className="flex flex-col h-full justify-between">
-                            <span className="text-[9px] font-bold text-slate-500 font-mono leading-none pl-0.5 pt-0.5">
-                              {rowNum}.
-                            </span>
-                            {rec && (rec.attendanceStatus === 'IZIN' || (rec.notes && rec.notes.toLowerCase().includes('izin'))) ? (
-                              <span className="text-[9px] font-extrabold text-amber-900 bg-amber-100/90 rounded px-1.5 py-0.5 mx-auto -mt-1 border border-amber-300">
-                                Izin (Tidak Hadir)
-                              </span>
-                            ) : rec && rec.signatureData ? (
-                              <img
-                                src={rec.signatureData}
-                                alt={`TTD ${rec.userName}`}
-                                className="h-20 w-full object-contain mx-auto p-0.5"
-                              />
-                            ) : rec && rec.signatureStatus === 'TERKONFIRMASI' ? (
-                              <span className="text-[9px] font-bold text-emerald-800 text-center block pb-0.5">
-                                Terkonfirmasi ✓
-                              </span>
-                            ) : null}
-                          </div>
+                  const renderSignatureCell = (record: AttendanceRecord | undefined, number: number) => (
+                    <td rowSpan={2} className="border border-slate-900 p-1 align-top w-28">
+                      <div className="flex min-h-[64px] h-full flex-col items-stretch gap-1">
+                        <span className="text-[9px] font-bold text-slate-600 font-mono leading-none">{number}.</span>
+                        {record && (record.attendanceStatus === 'IZIN' || (record.notes && record.notes.toLowerCase().includes('izin'))) ? (
+                          <span className="text-[8px] font-extrabold text-amber-900 bg-amber-100 rounded px-1 py-0.5 text-center border border-amber-300">
+                            Izin
+                          </span>
+                        ) : record && record.signatureData ? (
+                          <img src={record.signatureData} alt={`TTD ${record.userName}`} className="h-12 w-full object-contain mx-auto" />
+                        ) : record && record.signatureStatus === 'TERKONFIRMASI' ? (
+                          <span className="text-[8px] font-bold text-emerald-800 text-center">Terkonfirmasi ✓</span>
                         ) : null}
-                      </td>
+                      </div>
+                    </td>
+                  );
 
-                      {/* Tanda Tangan Kolom 2 (Genap: 2, 4, 6...) */}
-                      <td className="border border-slate-900 p-1 relative text-left align-top w-32 h-24">
-                        {!isOdd ? (
-                          <div className="flex flex-col h-full justify-between">
-                            <span className="text-[9px] font-bold text-slate-500 font-mono leading-none pl-0.5 pt-0.5">
-                              {rowNum}.
-                            </span>
-                            {rec && (rec.attendanceStatus === 'IZIN' || (rec.notes && rec.notes.toLowerCase().includes('izin'))) ? (
-                              <span className="text-[9px] font-extrabold text-amber-900 bg-amber-100/90 rounded px-1.5 py-0.5 mx-auto -mt-1 border border-amber-300">
-                                Izin (Tidak Hadir)
-                              </span>
-                            ) : rec && rec.signatureData ? (
-                              <img
-                                src={rec.signatureData}
-                                alt={`TTD ${rec.userName}`}
-                                className="h-20 w-full object-contain mx-auto p-0.5"
-                              />
-                            ) : rec && rec.signatureStatus === 'TERKONFIRMASI' ? (
-                              <span className="text-[9px] font-bold text-emerald-800 text-center block pb-0.5">
-                                Terkonfirmasi ✓
-                              </span>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </td>
-                    </tr>
+                  return (
+                    <React.Fragment key={`attend-pair-${pairIndex}`}>
+                      <tr className="border border-slate-900 text-slate-900 h-10">
+                        {renderRecordCells(leftRecord, leftNumber)}
+                        {renderSignatureCell(leftRecord, leftNumber)}
+                        {renderSignatureCell(rightRecord, leftNumber + 1)}
+                      </tr>
+                      <tr className="border border-slate-900 text-slate-900 h-10">
+                        {renderRecordCells(rightRecord, leftNumber + 1)}
+                      </tr>
+                    </React.Fragment>
                   );
                 })}
               </tbody>
@@ -317,7 +251,7 @@ export const AttendancePdfModal: React.FC<AttendancePdfModalProps> = ({
           </div>
 
           {/* Summary and Legal Signature Footer */}
-          <div className="pt-6 mt-4 flex flex-col sm:flex-row items-start justify-between gap-6 text-xs text-slate-800 break-inside-avoid">
+          <div data-report-footer="true" className="pt-6 mt-4 flex flex-col sm:flex-row items-start justify-between gap-6 text-xs text-slate-800 break-inside-avoid">
             <div className="space-y-1">
               <p className="font-bold text-slate-900">Catatan Kehadiran:</p>
               <p className="text-[11px] text-slate-600">Total Hadir: <strong>{sortedRecords.length} Peserta</strong></p>
@@ -357,12 +291,27 @@ export const AttendancePdfModal: React.FC<AttendancePdfModalProps> = ({
             visibility: visible;
           }
           .print-content {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 15mm;
+            position: static !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .print-content .overflow-x-auto {
+            overflow: visible !important;
+          }
+          .print-content table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+          }
+          .print-content thead {
+            display: table-header-group !important;
+          }
+          .print-content tfoot {
+            display: table-footer-group !important;
+          }
+          .print-content tr {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
           }
           @page {
             size: A4 portrait;

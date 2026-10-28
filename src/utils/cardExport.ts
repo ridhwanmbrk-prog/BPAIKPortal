@@ -87,33 +87,11 @@ export async function generateCardCanvasJpg(
     ctx.fillRect(0, 0, width, headerHeight);
   }
 
-  // 3. Bar informasi kartu di bawah kop resmi.
-  const subBarY = headerHeight;
-  const subBarHeight = 40;
-  ctx.fillStyle = '#eaf5ee';
-  ctx.fillRect(0, subBarY, width, subBarHeight);
-  ctx.fillStyle = '#c8e5d6';
-  ctx.fillRect(0, subBarY + subBarHeight - 1, width, 1);
-
-  ctx.fillStyle = '#093d26';
-  ctx.font = 'bold 15px monospace';
-  ctx.textAlign = 'left';
-  ctx.fillText('KARTU DIGITAL PESERTA BPAIK', 32, subBarY + 25);
-
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#10b981';
-  ctx.beginPath();
-  ctx.arc(width - 95, subBarY + 20, 5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#093d26';
-  ctx.font = 'bold 15px monospace';
-  ctx.fillText('AKTIF', width - 32, subBarY + 25);
-
-  // 4. Participant Photo: STRICT 2:3 ASPECT RATIO (No Stretching / Gepeng!)
+  // 3. Participant Photo: STRICT 2:3 ASPECT RATIO (No Stretching / Gepeng)
   const photoW = 220;
   const photoH = 330; // 220 / 330 = 2:3 exactly!
   const photoX = (width - photoW) / 2;
-  const photoY = subBarY + subBarHeight + 20;
+  const photoY = headerHeight + 20;
   const photoRadius = 24;
 
   ctx.save();

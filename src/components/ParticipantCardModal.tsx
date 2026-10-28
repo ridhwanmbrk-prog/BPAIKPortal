@@ -3,7 +3,7 @@ import { X, Printer, QrCode as QrIcon, CheckCircle2, ShieldCheck, Download, Cred
 import QRCode from 'qrcode';
 import { BPAIKUser } from '../types';
 import { getCardQrUrl } from '../utils/cardQr';
-import { downloadElementAsPdf } from '../utils/pdfExport';
+import { downloadElementsAsPdf } from '../utils/pdfExport';
 import { downloadCardElementAsJpg, generateCardCanvasJpg } from '../utils/cardExport';
 import { UnisaEmblem } from './Footer';
 
@@ -70,11 +70,17 @@ export const ParticipantCardModal: React.FC<ParticipantCardModalProps> = ({
         ? `kartu-peserta-bpaik-${selectedUser.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.pdf`
         : `semua-kartu-peserta-bpaik-${allEmployees.length}-orang.pdf`;
 
-      await downloadElementAsPdf(cardsContainerRef.current, {
+      const cards = Array.from(
+        cardsContainerRef.current.querySelectorAll<HTMLElement>('.card-container')
+      );
+      if (cards.length === 0) {
+        throw new Error('Tidak ada kartu yang siap diekspor.');
+      }
+      await downloadElementsAsPdf(cards, {
         fileName,
         orientation: 'portrait',
         format: 'a4',
-        marginMm: 8
+        marginMm: 10
       });
     } catch (err) {
       console.error('PDF card export error:', err);
@@ -268,15 +274,6 @@ export const ParticipantCardModal: React.FC<ParticipantCardModalProps> = ({
                   />
                 </div>
 
-                                {/* Subtitle Bar: Light Mint with green dot */}
-                <div className="bg-[#eaf5ee] px-3 py-1 flex items-center justify-between border-b border-[#c8e5d6] text-[8.5px] font-bold text-[#093d26] tracking-wider font-mono shrink-0">
-                  <span className="truncate">KARTU DIGITAL PESERTA BPAIK</span>
-                  <div className="flex items-center gap-1 text-[#0f613c] font-black shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                    <span>AKTIF</span>
-                  </div>
-                </div>
-
                 {/* 2. CARD BODY: Foto 2x3 Proporsional (strictly NOT gepeng) & Identitas */}
                 <div className="p-3.5 flex-1 flex flex-col items-center justify-between text-center bg-white">
                   
@@ -350,21 +347,32 @@ export const ParticipantCardModal: React.FC<ParticipantCardModalProps> = ({
             visibility: visible;
           }
           .print-cards-grid {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            display: grid !important;
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 8mm !important;
-            padding: 8mm !important;
+            position: static !important;
+            left: auto !important;
+            top: auto !important;
+            width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 0 !important;
+            padding: 0 !important;
             margin: 0 !important;
           }
           .card-container {
+            width: 75mm !important;
+            height: 128.6mm !important;
+            margin: 0 auto !important;
+            border-radius: 0 !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
+            break-after: page !important;
+            page-break-after: always !important;
             box-shadow: none !important;
-            border: 1.5pt solid #064e3b !important;
+            border: 1pt solid #064e3b !important;
+          }
+          .card-container:last-child {
+            break-after: auto !important;
+            page-break-after: auto !important;
           }
           @page {
             size: A4 portrait;
