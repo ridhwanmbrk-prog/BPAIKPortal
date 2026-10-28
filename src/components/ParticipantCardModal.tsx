@@ -3,9 +3,10 @@ import { X, Printer, QrCode as QrIcon, CheckCircle2, ShieldCheck, Download, Cred
 import QRCode from 'qrcode';
 import { BPAIKUser } from '../types';
 import { getCardQrUrl } from '../utils/cardQr';
-import { downloadElementsAsPdf } from '../utils/pdfExport';
-import { downloadCardElementAsJpg, generateCardCanvasJpg } from '../utils/cardExport';
+import { generateCardCanvasJpg } from '../utils/cardExport';
 import { UnisaEmblem } from './Footer';
+
+import { downloadImagesAsPdf } from '../utils/pdfExport';
 
 interface ParticipantCardModalProps {
   employee?: BPAIKUser | null;
@@ -58,83 +59,61 @@ export const ParticipantCardModal: React.FC<ParticipantCardModalProps> = ({
     generateQRs();
   }, [printMode, selectedUser, allEmployees]);
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => { void handleDownloadPdf(); };
 
   const handleDownloadPdf = async () => {
-    if (!cardsContainerRef.current) return;
+    const targets = listToRender;
+    if (!targets.length) {
+      alert('Tidak ada kartu peserta untuk dibuat menjadi PDF.');
+      return;
+    }
     setIsDownloadingPdf(true);
     try {
+      const cleanEventName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
       const fileName = printMode === 'single' && selectedUser
-        ? `kartu-peserta-bpaik-${selectedUser.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.pdf`
-        : `semua-kartu-peserta-bpaik-${allEmployees.length}-orang.pdf`;
-
-      const cards = Array.from(
-        cardsContainerRef.current.querySelectorAll<HTMLElement>('.card-container')
-      );
-      if (cards.length === 0) {
-        throw new Error('Tidak ada kartu yang siap diekspor.');
+        ? `kartu-peserta-bpaik-${cleanEventName(selectedUser.name)}.pdf`
+        : `semua-kartu-peserta-bpaik-${targets.length}-orang.pdf`;
+      const images: string[] = [];
+      for (const participant of targets) {
+        images.push(await generateCardCanvasJpg(participant, qrCodeUrls[participant.id] || ''));
       }
-      await downloadElementsAsPdf(cards, {
-        fileName,
-        orientation: 'portrait',
-        format: 'a4',
-        marginMm: 10
-      });
+      await downloadImagesAsPdf(images, { fileName, orientation: 'portrait', format: 'a4' });
     } catch (err) {
       console.error('PDF card export error:', err);
-      alert('Gagal mengunduh PDF kartu peserta.');
+      const reason = err instanceof Error ? err.message : String(err);
+      alert(`PDF kartu gagal dibuat: ${reason}`);
     } finally {
       setIsDownloadingPdf(false);
     }
   };
 
   const handleDownloadJpg = async () => {
-    if (!cardsContainerRef.current) return;
+    const participant = (printMode === 'single' ? selectedUser : (selectedUser || allEmployees[0])) || allEmployees[0];
+    if (!participant) {
+      alert('Pilih peserta terlebih dahulu.');
+      return;
+    }
     setIsDownloadingJpg(true);
     try {
-      const targetCard = cardsContainerRef.current.querySelector('.card-container') as HTMLElement;
-      const targetUserObj = selectedUser || allEmployees[0];
-      const cleanName = (targetUserObj?.name || 'peserta').toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30);
-      const fileName = `kartu-digital-bpaik-${cleanName}.jpg`;
-
-      if (targetCard) {
-        await downloadCardElementAsJpg(targetCard, fileName);
-      } else if (targetUserObj) {
-        const qrUrl = qrCodeUrls[targetUserObj.id] || '';
-        const jpgDataUrl = await generateCardCanvasJpg(targetUserObj, qrUrl);
-        const link = document.createElement('a');
-        link.href = jpgDataUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+      const cleanName = participant.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+      const image = await generateCardCanvasJpg(participant, qrCodeUrls[participant.id] || '');
+      if (!image) throw new Error('Gambar kartu tidak berhasil dibuat.');
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = `kartu-digital-bpaik-${cleanName}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     } catch (err) {
-      console.error('JPG download error, trying direct canvas fallback:', err);
-      try {
-        const targetUserObj = selectedUser || allEmployees[0];
-        if (targetUserObj) {
-          const qrUrl = qrCodeUrls[targetUserObj.id] || '';
-          const jpgDataUrl = await generateCardCanvasJpg(targetUserObj, qrUrl);
-          const link = document.createElement('a');
-          link.href = jpgDataUrl;
-          link.download = `kartu-digital-bpaik-${targetUserObj.name.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-      } catch (fallbackErr) {
-        alert('Gagal mengunduh JPG kartu peserta.');
-      }
+      console.error('JPG download error:', err);
+      alert(`JPG kartu gagal dibuat: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsDownloadingJpg(false);
     }
   };
 
   return (
-    <div className="participant-card-modal-root fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-center p-2 sm:p-4 overflow-y-auto">
       {/* Top Action Header */}
       <div className="print:hidden w-full max-w-4xl bg-slate-900 text-white px-4 py-3 rounded-t-2xl flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 shadow-xl">
         <div className="flex items-center gap-2.5">
@@ -235,10 +214,10 @@ export const ParticipantCardModal: React.FC<ParticipantCardModalProps> = ({
             type="button"
             onClick={handlePrint}
             className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
-            title="Cetak atau Unduh PDF melalui driver cetak device"
+            title="Unduh PDF kartu siap cetak tanpa dialog cetak browser"
           >
             <Printer className="w-3.5 h-3.5 text-amber-400" />
-            <span>Cetak Kartu</span>
+            <span>PDF Siap Cetak</span>
           </button>
 
           <button
@@ -253,7 +232,7 @@ export const ParticipantCardModal: React.FC<ParticipantCardModalProps> = ({
       </div>
 
       {/* Sheet Content Area */}
-      <div className="participant-card-sheet w-full max-w-4xl bg-slate-100 rounded-b-2xl p-4 sm:p-8 shadow-2xl max-h-[85vh] overflow-y-auto print:max-h-none print:overflow-visible print:p-0 print:m-0 print:shadow-none print:w-full print:bg-white print:rounded-none">
+      <div className="w-full max-w-4xl bg-slate-100 rounded-b-2xl p-4 sm:p-8 shadow-2xl max-h-[85vh] overflow-y-auto print:max-h-none print:overflow-visible print:p-0 print:m-0 print:shadow-none print:w-full print:bg-white print:rounded-none">
         
         {/* Strictly Portrait Cards Layout with 2:3 uncompressed Photo */}
         <div ref={cardsContainerRef} className="print-cards-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 justify-items-center">
@@ -262,16 +241,40 @@ export const ParticipantCardModal: React.FC<ParticipantCardModalProps> = ({
             return (
               <div
                 key={emp.id}
-                className="card-container w-[280px] h-[480px] bg-white rounded-3xl border-2 border-[#063921] shadow-xl overflow-hidden relative break-inside-avoid flex flex-col justify-between select-none"
+                className="card-container w-[280px] h-[450px] bg-white rounded-3xl border-2 border-[#063921] shadow-xl overflow-hidden relative break-inside-avoid flex flex-col justify-between select-none"
               >
-                {/* Kop kartu resmi BPAIK: gunakan rasio asli 640:227 */}
-                <div className="w-full shrink-0 bg-white">
-                  <img
-                    src="/images/KOP-KARTU-BPAIK.jpg"
-                    alt="Kop kartu resmi BPAIK"
-                    className="block w-full h-auto"
-                    loading="eager"
-                  />
+                {/* 1. KOP ATAS: Deep Forest Green (#073922) */}
+                <div className="bg-[#073922] text-white p-3 flex items-center gap-2.5 shrink-0">
+                  <div className="w-11 h-11 rounded-full bg-white p-1 shrink-0 flex items-center justify-center shadow-xs">
+                    <img
+                      src="/images/logoBPAIK.png"
+                      alt="Logo UNISA"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1 leading-tight">
+                    <h4 className="text-[11px] font-black tracking-wider uppercase text-[#F4C542] font-serif leading-tight">
+                      UNIVERSITAS 'AISYIYAH<br />BANDUNG
+                    </h4>
+                    <p className="text-[8.5px] text-white/95 font-medium tracking-normal mt-0.5 leading-tight">
+                      Badan Pengembangan Al-Islam &<br />Kemuhammadiyahan
+                    </p>
+                  </div>
+                </div>
+
+                {/* Solid Gold Accent Divider Line */}
+                <div className="w-full h-[2.5px] bg-[#F4C542] shrink-0" />
+
+                {/* Subtitle Bar: Light Mint with green dot */}
+                <div className="bg-[#eaf5ee] px-3 py-1 flex items-center justify-between border-b border-[#c8e5d6] text-[8.5px] font-bold text-[#093d26] tracking-wider font-mono shrink-0">
+                  <span className="truncate">KARTU DIGITAL PESERTA BPAIK</span>
+                  <div className="flex items-center gap-1 text-[#0f613c] font-black shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+                    <span>AKTIF</span>
+                  </div>
                 </div>
 
                 {/* 2. CARD BODY: Foto 2x3 Proporsional (strictly NOT gepeng) & Identitas */}
@@ -346,58 +349,22 @@ export const ParticipantCardModal: React.FC<ParticipantCardModalProps> = ({
           .print-cards-grid, .print-cards-grid * {
             visibility: visible;
           }
-          .participant-card-modal-root {
-            position: static !important;
-            inset: auto !important;
-            display: block !important;
-            width: 100% !important;
-            height: auto !important;
-            min-height: 0 !important;
-            overflow: visible !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            background: #ffffff !important;
-            backdrop-filter: none !important;
-          }
-          .participant-card-sheet {
-            position: static !important;
-            width: 100% !important;
-            max-width: none !important;
-            max-height: none !important;
-            height: auto !important;
-            overflow: visible !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            background: #ffffff !important;
-            box-shadow: none !important;
-          }
           .print-cards-grid {
-            position: static !important;
-            display: block !important;
-            width: 100% !important;
-            padding: 0 !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 8mm !important;
+            padding: 8mm !important;
             margin: 0 !important;
           }
           .card-container {
-            display: block !important;
-            box-sizing: border-box !important;
-            width: 75mm !important;
-            height: 128.6mm !important;
-            margin: 0 0 0 0 !important;
-            border-radius: 0 !important;
-            overflow: hidden !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
-            break-before: auto !important;
-            page-break-before: auto !important;
-            break-after: page !important;
-            page-break-after: always !important;
             box-shadow: none !important;
-            border: 1pt solid #064e3b !important;
-          }
-          .card-container:last-child {
-            break-after: auto !important;
-            page-break-after: auto !important;
+            border: 1.5pt solid #064e3b !important;
           }
           @page {
             size: A4 portrait;
