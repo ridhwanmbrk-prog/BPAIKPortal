@@ -25,28 +25,68 @@ async function waitForImages(element: HTMLElement): Promise<void> {
   }));
 }
 
-async function renderElement(element: HTMLElement): Promise<HTMLCanvasElement> {
+function inlineResolvedStyles(source: Element, target: Element): void {
+  const sourceNodes = [source, ...Array.from(source.querySelectorAll('*'))];
+  const targetNodes = [target, ...Array.from(target.querySelectorAll('*'))];
+  const count = Math.min(sourceNodes.length, targetNodes.length);
+  for (let index = 0; index < count; index++) {
+    const sourceNode = sourceNodes[index];
+    const targetNode = targetNodes[index] as HTMLElement | SVGElement;
+    const computed = window.getComputedStyle(sourceNode);
+    for (let styleIndex = 0; styleIndex < computed.length; styleIndex++) {
+      const property = computed.item(styleIndex);
+      const value = computed.getPropertyValue(property);
+      if (!property || !value) continue;
+      try { targetNode.style.setProperty(property, value); } catch { /* browser-specific computed property */ }
+    }
+    targetNodes[index].removeAttribute('class');
+  }
+}
+
+async function renderElement(element: HTMLElement, squareCorners = false): Promise<HTMLCanvasElement> {
   await waitForImages(element);
   if (document.fonts?.ready) await document.fonts.ready;
 
-  const width = Math.max(1, element.scrollWidth);
-  const height = Math.max(1, element.scrollHeight);
-  const scale = Math.max(0.5, Math.min(2, 1800 / width, 14000 / height));
-  const canvas = await html2canvas(element, {
-    scale,
-    useCORS: true,
-    allowTaint: false,
-    logging: false,
-    backgroundColor: '#ffffff',
-    windowWidth: width,
-    windowHeight: height,
-    scrollX: 0,
-    scrollY: 0
-  });
-  if (!canvas.width || !canvas.height) {
-    throw new Error('Konten dokumen kosong sehingga PDF tidak dapat dibuat.');
+  const rect = element.getBoundingClientRect();
+  const width = Math.max(1, Math.ceil(rect.width || element.scrollWidth));
+  const height = Math.max(1, Math.ceil(rect.height || element.scrollHeight));
+  const clone = element.cloneNode(true) as HTMLElement;
+  inlineResolvedStyles(element, clone);
+  if (squareCorners) {
+    clone.style.setProperty('border-radius', '0', 'important');
+    clone.style.setProperty('box-shadow', 'none', 'important');
   }
-  return canvas;
+  Object.assign(clone.style, {
+    position: 'fixed',
+    left: '0',
+    top: '0',
+    zIndex: '-2147483648',
+    pointerEvents: 'none',
+    maxWidth: 'none',
+    maxHeight: 'none',
+    overflow: 'visible',
+    backgroundColor: '#ffffff'
+  });
+  document.body.appendChild(clone);
+  try {
+    await waitForImages(clone);
+    const scale = Math.max(0.7, Math.min(2, 1800 / width, 14000 / height));
+    const canvas = await html2canvas(clone, {
+      scale,
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      backgroundColor: '#ffffff',
+      windowWidth: Math.max(window.innerWidth, width),
+      windowHeight: Math.max(window.innerHeight, height),
+      scrollX: 0,
+      scrollY: 0
+    });
+    if (!canvas.width || !canvas.height) throw new Error('Kanvas hasil kosong. Periksa gambar kop dan tanda tangan.');
+    return canvas;
+  } finally {
+    clone.remove();
+  }
 }
 
 function safeFileName(fileName: string): string {
@@ -115,13 +155,15 @@ export async function downloadElementsAsPdf(
   const maxHeight = pageHeight - marginMm * 2;
 
   for (let index = 0; index < elements.length; index++) {
-    const canvas = await renderElement(elements[index]);
+    const sourceCard = elements[index];
+    // Make only the exported card's outer corners square without changing the on-screen preview.
+    const canvas = await renderElement(sourceCard, true);
     const imageData = canvas.toDataURL('image/jpeg', 0.97);
     const ratio = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
     const width = canvas.width * ratio;
     const height = canvas.height * ratio;
     const x = (pageWidth - width) / 2;
-    const y = (pageHeight - height) / 2;
+    const y = marginMm;
     if (index > 0) pdf.addPage(format, orientation);
     pdf.addImage(imageData, 'JPEG', x, y, width, height, undefined, 'FAST');
   }
@@ -169,14 +211,15 @@ export async function downloadAttendanceTableAsPdf(
     clone.setAttribute('aria-hidden', 'true');
     Object.assign(clone.style, {
       position: 'fixed',
-      left: '-100000px',
+      left: '0',
       top: '0',
       width: `${renderWidth}px`,
       maxHeight: 'none',
       height: 'auto',
       overflow: 'visible',
       background: '#ffffff',
-      zIndex: '-1'
+      zIndex: '-2147483648',
+      pointerEvents: 'none'
     });
 
     const cloneTable = clone.querySelector('table');
@@ -195,7 +238,7 @@ export async function downloadAttendanceTableAsPdf(
       const width = canvas.width * ratio;
       const height = canvas.height * ratio;
       const x = (pageWidth - width) / 2;
-      const y = (pageHeight - height) / 2;
+      const y = marginMm;
       if (pageIndex > 0) pdf.addPage(format, orientation);
       pdf.addImage(imageData, 'JPEG', x, y, width, height, undefined, 'FAST');
     } finally {

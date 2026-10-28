@@ -51,7 +51,8 @@ export const AttendancePdfModal: React.FC<AttendancePdfModalProps> = ({
       });
     } catch (err) {
       console.error('PDF export error:', err);
-      alert('PDF gagal dibuat. Silakan coba lagi; tidak ada dialog cetak tambahan yang dibuka.');
+      const reason = err instanceof Error ? err.message : String(err);
+      alert(`PDF gagal dibuat: ${reason}`);
     } finally {
       setIsDownloadingPdf(false);
     }
@@ -61,9 +62,9 @@ export const AttendancePdfModal: React.FC<AttendancePdfModalProps> = ({
   const totalRows = sortedRecords.length;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div className="attendance-pdf-modal-root fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-center p-2 sm:p-4 overflow-y-auto">
       {/* Action Bar (Hidden when printing) */}
-      <div className="print:hidden w-full max-w-4xl bg-slate-900 text-white px-4 py-3 rounded-t-2xl flex flex-wrap items-center justify-between gap-2 border-b border-slate-700 shadow-xl">
+      <div className="attendance-pdf-actions print:hidden w-full max-w-4xl bg-slate-900 text-white px-4 py-3 rounded-t-2xl flex flex-wrap items-center justify-between gap-2 border-b border-slate-700 shadow-xl">
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
           <div>
@@ -126,7 +127,7 @@ export const AttendancePdfModal: React.FC<AttendancePdfModalProps> = ({
       </div>
 
       {/* Printable Sheet Wrapper */}
-      <div className="w-full max-w-4xl bg-white text-slate-900 rounded-b-2xl p-6 sm:p-10 shadow-2xl max-h-[85vh] overflow-y-auto print:max-h-none print:overflow-visible print:p-0 print:m-0 print:shadow-none print:w-full print:rounded-none">
+      <div className="attendance-pdf-sheet w-full max-w-4xl bg-white text-slate-900 rounded-b-2xl p-6 sm:p-10 shadow-2xl max-h-[85vh] overflow-y-auto print:max-h-none print:overflow-visible print:p-0 print:m-0 print:shadow-none print:w-full print:rounded-none">
         
         <div ref={printAreaRef} className="print-content space-y-4">
           
@@ -290,9 +291,41 @@ export const AttendancePdfModal: React.FC<AttendancePdfModalProps> = ({
           .print-content, .print-content * {
             visibility: visible;
           }
-          .print-content {
+          .attendance-pdf-modal-root {
+            position: static !important;
+            inset: auto !important;
+            display: block !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #ffffff !important;
+            backdrop-filter: none !important;
+          }
+          .attendance-pdf-actions { display: none !important; }
+          .attendance-pdf-sheet {
             position: static !important;
             width: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+            height: auto !important;
+            overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            background: #ffffff !important;
+          }
+          .print-content {
+            position: static !important;
+            display: block !important;
+            width: 100% !important;
+            max-width: none !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
             margin: 0 !important;
             padding: 0 !important;
           }

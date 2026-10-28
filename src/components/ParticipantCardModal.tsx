@@ -134,7 +134,7 @@ export const ParticipantCardModal: React.FC<ParticipantCardModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div className="participant-card-modal-root fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-center p-2 sm:p-4 overflow-y-auto">
       {/* Top Action Header */}
       <div className="print:hidden w-full max-w-4xl bg-slate-900 text-white px-4 py-3 rounded-t-2xl flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 shadow-xl">
         <div className="flex items-center gap-2.5">
@@ -253,7 +253,7 @@ export const ParticipantCardModal: React.FC<ParticipantCardModalProps> = ({
       </div>
 
       {/* Sheet Content Area */}
-      <div className="w-full max-w-4xl bg-slate-100 rounded-b-2xl p-4 sm:p-8 shadow-2xl max-h-[85vh] overflow-y-auto print:max-h-none print:overflow-visible print:p-0 print:m-0 print:shadow-none print:w-full print:bg-white print:rounded-none">
+      <div className="participant-card-sheet w-full max-w-4xl bg-slate-100 rounded-b-2xl p-4 sm:p-8 shadow-2xl max-h-[85vh] overflow-y-auto print:max-h-none print:overflow-visible print:p-0 print:m-0 print:shadow-none print:w-full print:bg-white print:rounded-none">
         
         {/* Strictly Portrait Cards Layout with 2:3 uncompressed Photo */}
         <div ref={cardsContainerRef} className="print-cards-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 justify-items-center">
@@ -346,25 +346,50 @@ export const ParticipantCardModal: React.FC<ParticipantCardModalProps> = ({
           .print-cards-grid, .print-cards-grid * {
             visibility: visible;
           }
+          .participant-card-modal-root {
+            position: static !important;
+            inset: auto !important;
+            display: block !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #ffffff !important;
+            backdrop-filter: none !important;
+          }
+          .participant-card-sheet {
+            position: static !important;
+            width: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+            height: auto !important;
+            overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #ffffff !important;
+            box-shadow: none !important;
+          }
           .print-cards-grid {
             position: static !important;
-            left: auto !important;
-            top: auto !important;
+            display: block !important;
             width: 100% !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            gap: 0 !important;
             padding: 0 !important;
             margin: 0 !important;
           }
           .card-container {
+            display: block !important;
+            box-sizing: border-box !important;
             width: 75mm !important;
             height: 128.6mm !important;
-            margin: 0 auto !important;
+            margin: 0 0 0 0 !important;
             border-radius: 0 !important;
+            overflow: hidden !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
+            break-before: auto !important;
+            page-break-before: auto !important;
             break-after: page !important;
             page-break-after: always !important;
             box-shadow: none !important;
